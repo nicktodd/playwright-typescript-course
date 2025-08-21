@@ -1,0 +1,62 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  ts-crud-demo
+  Simple API demo using DynamoDB for accessing a TV Schedule dataset
+
+Globals:
+  Function:
+    Timeout: 3
+    Tracing: Active
+    LoggingConfig:
+      LogFormat: JSON
+  Api:
+    TracingEnabled: true
+Resources:
+  TVScheduleFunction:
+    Type: AWS::Serverless::Function 
+    Properties:
+      CodeUri: tvschedule/
+      Handler: app.lambdaHandler
+      Runtime: nodejs20.x
+      Architectures:
+      - x86_64
+      Events:
+        GetSchedule:
+          Type: Api 
+          Properties:
+            Path: /
+            Method: get
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: TVSchedule
+    Metadata: # Manage esbuild properties
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: es2020
+        Sourcemap: true
+        EntryPoints:
+        - app.ts
+  DynamoDBTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: TVSchedule
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      BillingMode: PAY_PER_REQUEST
+
+Outputs:
+  TVScheduleApi:
+    Description: API Gateway endpoint URL for Prod stage for TV Schedule function
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/hello/"
+  TVScheduleFunction:
+    Description: TV Schedule Function ARN
+    Value: !GetAtt TVScheduleFunction.Arn
+  TVScheduleFunctionIamRole:
+    Description: Implicit IAM Role created for TV Schedule function
+    Value: !GetAtt TVScheduleFunctionRole.Arn
